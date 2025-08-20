@@ -1,513 +1,221 @@
 // src/pages/ProductDetailsPage.jsx
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import ImageGallery from 'react-image-gallery';
 import "react-image-gallery/styles/css/image-gallery.css";
-import AccessTimeIcon from '@mui/icons-material/AccessTime'; // استيراد أيقونة الساعة
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
+import AudiotrackIcon from '@mui/icons-material/Audiotrack';
+import ShareIcon from '@mui/icons-material/Share';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 
 import { fetchProductDetails } from '../store/productDetailsSlice';
 import ProductDetailsSkeleton from '../components/ProductDetailsSkeleton';
 import Message from '../components/Message';
-import { 
-  Grid, 
-  Typography, 
-  Box, 
-  Chip, 
-  Divider, 
-  Breadcrumbs, 
-  Link as MuiLink, 
-  Badge,
-  useTheme,
-  useMediaQuery
+import {
+  Grid, Typography, Box, Chip, Divider, Breadcrumbs, Link as MuiLink,
+  Badge, useTheme, useMediaQuery, IconButton, Tooltip, Card, CardContent
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
-// Enhanced responsive image styles for gallery
-const getGalleryImageStyle = (theme) => ({
-  width: '100%',
-  maxWidth: {
-    xs: '280px',
-    sm: '350px',
-    md: '450px',
-    lg: '500px'
-  },
-  height: 'auto',
-  aspectRatio: '1 / 1',
-  objectFit: 'cover',
-  borderRadius: {
-    xs: '12px',
-    sm: '15px',
-    md: '18px'
-  },
-  boxShadow: {
-    xs: '0 4px 16px rgba(0,0,0,0.1)',
-    sm: '0 6px 20px rgba(0,0,0,0.12)',
-    md: '0 6px 24px rgba(0,0,0,0.13)'
-  },
-  backgroundColor: '#fff',
-  display: 'block',
-  margin: '0 auto',
-  transition: 'transform 0.3s ease',
-});
+// ====================================================================
+// الدوال المساعدة للمعرض (النسخة المحدثة)
+// ====================================================================
 
-const getGalleryThumbStyle = (theme) => ({
-  width: {
-    xs: '60px',
-    sm: '70px',
-    md: '80px'
-  },
-  height: {
-    xs: '60px',
-    sm: '70px',
-    md: '80px'
-  },
-  objectFit: 'cover',
-  borderRadius: {
-    xs: '8px',
-    sm: '9px',
-    md: '10px'
-  },
-  boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
-  backgroundColor: '#f8f8f8',
-  border: '2px solid #e0e0e0',
-  display: 'block',
-  cursor: 'pointer',
-  transition: 'border 0.2s, box-shadow 0.2s',
-});
+// **التعديل الرئيسي هنا: دالة عرض موحدة لجميع أنواع الوسائط**
+const renderMedia = (item) => {
+    const url = item.original;
+    const isVideo = /\.(mp4|mov|avi|mpeg|webm)$/i.test(url);
+    const isAudio = /\.(mp3|wav|ogg|aac|flac)$/i.test(url);
 
-// Responsive arrow buttons for gallery
-const getArrowButtonStyle = (theme) => ({
-  background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(240,240,240,0.95) 100%)',
-  border: '1px solid rgba(0,0,0,0.1)',
-  borderRadius: {
-    xs: '8px',
-    sm: '10px',
-    md: '12px'
-  },
-  boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1)',
-  width: {
-    xs: 40,
-    sm: 45,
-    md: 50
-  },
-  height: {
-    xs: 40,
-    sm: 45,
-    md: 50
-  },
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  cursor: 'pointer',
-  position: 'absolute',
-  top: '40%',
-  transform: 'translateY(-50%)',
-  zIndex: 10,
-  transition: 'all 0.3s ease',
-  backdropFilter: 'blur(10px)',
-});
-
-const getArrowIconStyle = (theme) => ({
-  fontSize: {
-    xs: 16,
-    sm: 18,
-    md: 20
-  },
-  fontWeight: 'bold',
-  color: '#333',
-  transition: 'all 0.2s ease',
-});
-
-const createArrowButton = (direction, theme, isMobile) => (onClick, disabled) => {
-  const baseStyle = {
-    ...getArrowButtonStyle(theme),
-    [direction]: isMobile ? 5 : 10,
-    opacity: disabled ? 0.4 : 1,
-    cursor: disabled ? 'not-allowed' : 'pointer'
-  };
-
-  return (
-    <button
-      type="button"
-      style={baseStyle}
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={direction === 'left' ? 'السابق' : 'التالي'}
-      onMouseEnter={(e) => {
-        if (!disabled && !isMobile) {
-          const translateX = direction === 'left' ? '-3px' : '3px';
-          e.currentTarget.style.transform = `translateY(-50%) translateX(${translateX}) scale(1.1)`;
-          e.currentTarget.style.background = 'linear-gradient(135deg, rgba(42,157,143,0.9) 0%, rgba(38,70,83,0.9) 100%)';
-          e.currentTarget.children[0].style.color = '#fff';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!disabled && !isMobile) {
-          e.currentTarget.style.transform = 'translateY(-50%) translateX(0) scale(1)';
-          e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(240,240,240,0.95) 100%)';
-          e.currentTarget.children[0].style.color = '#333';
-        }
-      }}
-    >
-      <span style={getArrowIconStyle(theme)}>
-        {direction === 'left' ? '❮' : '❯'}
-      </span>
-    </button>
-  );
-};
-
-// Enhanced responsive page animations
-const pageVariants = {
-  initial: { 
-    opacity: 0, 
-    y: 30,
-    scale: 0.98
-  },
-  in: { 
-    opacity: 1, 
-    y: 0,
-    scale: 1
-  },
-  out: { 
-    opacity: 0, 
-    y: -20,
-    scale: 0.98
-  }
-};
-
-const getPageTransition = (isMobile) => ({
-  type: "tween",
-  ease: "anticipate",
-  duration: isMobile ? 0.3 : 0.5
-});
-
-const ProductDetailsPage = () => {
-  const dispatch = useDispatch();
-  const { id: productId } = useParams();
-  const { product, status, error } = useSelector((state) => state.productDetails);
-  
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
-  const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
-
-  useEffect(() => {
-    if (productId) {
-      dispatch(fetchProductDetails(productId));
-    }
-  }, [dispatch, productId]);
-
-  const imagesForGallery = useMemo(() => {
-    if (!product) return [];
-    const allImages = Array.from(new Set([product.image, ...(product.images || [])].filter(Boolean)));
-    return allImages.map(img => ({
-      original: `${import.meta.env.VITE_BACKEND_URL}${img}`,
-      thumbnail: `${import.meta.env.VITE_BACKEND_URL}${img}`,
-    }));
-  }, [product]);
-
-  // Responsive render functions
-  const renderLeftNav = createArrowButton('left', theme, isMobile);
-  const renderRightNav = createArrowButton('right', theme, isMobile);
-
-  const renderResponsiveItem = (item) => (
-    <Box
-      sx={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
+    // أنماط موحدة للفيديو والصور لضمان ملء الحاوية
+    const mediaStyles = {
         width: '100%',
-        height: '100%'
-      }}
-    >
-      <Box
-        component="img"
-        src={item.original}
-        alt="صورة المنتج"
-        sx={{
-          ...getGalleryImageStyle(theme),
-          '&:hover': !isMobile ? {
-            transform: 'scale(1.03)'
-          } : {}
-        }}
-      />
-    </Box>
-  );
+        height: '100%',
+        objectFit: 'contain', // أهم خاصية لضمان ظهور المحتوى كاملاً
+        borderRadius: '18px',
+    };
 
-  const renderResponsiveThumb = (item) => (
-    <Box
-      component="img"
-      src={item.thumbnail}
-      alt="صورة مصغرة"
-      sx={getGalleryThumbStyle(theme)}
-    />
-  );
-
-  if (status === 'loading') {
-    return <ProductDetailsSkeleton />;
-  }
-
-  if (status === 'failed') {
-    return <Message variant="danger">{error}</Message>;
-  }
-
-  if (!product) {
-    return <Message>المنتج غير موجود</Message>;
-  }
-
-  // Responsive breadcrumbs
-  const breadcrumbs = (
-    <Breadcrumbs 
-      aria-label="breadcrumb" 
-      sx={{ 
-        mb: { xs: 1, sm: 2 },
-        fontSize: { xs: '0.8rem', sm: '0.9rem', md: '1rem' }
-      }}
-    >
-      <MuiLink 
-        component={RouterLink} 
-        underline="hover" 
-        color="inherit" 
-        to="/"
-        sx={{ fontSize: 'inherit' }}
-      >
-        الرئيسية
-      </MuiLink>
-      {product?.category && (
-        <MuiLink
-          component={RouterLink}
-          underline="hover"
-          color="inherit"
-          to={`/?category=${product.category._id}`}
-          sx={{ fontSize: 'inherit' }}
-        >
-          {product.category.name}
-        </MuiLink>
-      )}
-      <Typography 
-        color="text.primary" 
-        sx={{ 
-          fontSize: 'inherit',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: isMobile ? 'nowrap' : 'normal',
-          maxWidth: isMobile ? '150px' : 'none'
-        }}
-      >
-        {product?.name}
-      </Typography>
-    </Breadcrumbs>
-  );
-
-  return (
-    <motion.div
-      initial="initial"
-      animate="in"
-      exit="out"
-      variants={pageVariants}
-      transition={getPageTransition(isMobile)}
-    >
-      <Box sx={{ 
-        px: { xs: 1, sm: 2, md: 3, lg: 4 },
-        py: { xs: 1, sm: 2 },
-        maxWidth: '1400px',
-        margin: '0 auto'
-      }}>
-        {breadcrumbs}
-        
-        <Grid container spacing={{ xs: 2, sm: 3, md: 4, lg: 5 }}>
-          {/* Image Gallery Section */}
-          <Grid 
-            item 
-            xs={12} 
-            md={7}
-            lg={8}
-            sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              minHeight: { 
-                xs: 250, 
-                sm: 350, 
-                md: 450, 
-                lg: 520 
-              },
-              px: { xs: 0.5, sm: 1, md: 2 }
-            }}
-          >
-            <Box sx={{ 
-              width: '100%',
-              maxWidth: { xs: '100%', sm: '90%', md: '95%', lg: '100%' },
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center'
+    return (
+        <div className="image-gallery-image">
+            <Box sx={{
+                width: '100%',
+                height: '100%',
+                maxHeight: { xs: '50vh', sm: '60vh', md: '70vh' },
+                aspectRatio: '1 / 1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#f0f2f5',
+                borderRadius: '24px',
+                overflow: 'hidden'
             }}>
-              <ImageGallery
-                items={imagesForGallery}
-                showPlayButton={false}
-                showFullscreenButton={!isMobile}
-                thumbnailPosition="bottom"
-                isRTL={true}
-                slideDuration={isMobile ? 300 : 450}
-                slideInterval={4000}
-                renderItem={renderResponsiveItem}
-                renderThumbInner={renderResponsiveThumb}
-                renderLeftNav={renderLeftNav}
-                renderRightNav={renderRightNav}
-                showThumbnails={!isMobile || imagesForGallery.length > 1}
-                showNav={imagesForGallery.length > 1}
-              />
-            </Box>
-          </Grid>
-
-          {/* Product Details Section */}
-          <Grid 
-            item 
-            xs={12} 
-            md={5}
-            lg={4}
-            sx={{ 
-              px: { xs: 1, sm: 2, md: 1 },
-              mt: { xs: 2, md: 0 }
-            }}
-          >
-            <Box sx={{ 
-              position: 'sticky',
-              top: { md: 20, lg: 40 },
-              pb: 2
-            }}>
-              {/* Product Title */}
-              <Typography 
-                variant="h3" 
-                component="h1" 
-                gutterBottom 
-                sx={{ 
-                  fontSize: { 
-                    xs: '1.4rem', 
-                    sm: '1.8rem', 
-                    md: '2.1rem',
-                    lg: '2.5rem'
-                  },
-                  fontWeight: { xs: 600, md: 700 },
-                  lineHeight: { xs: 1.3, sm: 1.4, md: 1.2 },
-                  mb: { xs: 1, sm: 2 }
-                }}
-              >
-                {product.name}
-              </Typography>
-
-              {/* Category Chip */}
-              {product.category && (
-                <Chip 
-                  label={product.category.name} 
-                  color="primary" 
-                  size={isMobile ? "small" : "medium"}
-                  sx={{ 
-                    mb: { xs: 1.5, sm: 2 },
-                    fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }
-                  }} 
-                />
-              )}
-
-              <Divider sx={{ my: { xs: 1.5, sm: 2 } }} />
-
-              {/* Product Description */}
-              <Typography 
-                variant="body1" 
-                paragraph
-                sx={{
-                  fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' },
-                  lineHeight: { xs: 1.5, sm: 1.6, md: 1.7 },
-                  color: 'text.secondary',
-                  mb: { xs: 2, sm: 3 }
-                }}
-              >
-                {product.description}
-              </Typography>
-              {/* Execution Time */}
-              {product.executionTime && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, p: 1.5, bgcolor: 'grey.100', borderRadius: 1 }}>
-                        <AccessTimeIcon color="primary" sx={{ mr: 1.5 }} />
-                        <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold', mr: 1 }}>وقت التنفيذ:</Typography>
-                        <Typography variant="body1">{product.executionTime}</Typography>
-                    </Box>
-                )}
-              <Divider sx={{ my: { xs: 1.5, sm: 2 } }} />
-
-              {/* Price Section */}
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                flexWrap: 'wrap',
-                gap: { xs: 1, sm: 2 }, 
-                my: { xs: 2, sm: 3 }
-              }}>
-                <Typography 
-                  variant="h4" 
-                  component="p" 
-                  color="text.primary" 
-                  fontWeight="bold"
-                  sx={{
-                    fontSize: { xs: '1.5rem', sm: '1.8rem', md: '2rem' }
-                  }}
-                >
-                  ${product.price}
-                </Typography>
-
-                {product.originalPrice && product.originalPrice > product.price && (
-                  <>
-                    <Typography 
-                      variant="h5" 
-                      color="text.secondary" 
-                      sx={{ 
-                        textDecoration: 'line-through',
-                        fontSize: { xs: '1rem', sm: '1.2rem', md: '1.3rem' }
-                      }}
+                {isVideo ? (
+                    <video
+                        src={url}
+                        controls
+                        style={mediaStyles}
+                        crossOrigin="anonymous"
+                        preload="metadata"
                     >
-                      ${product.originalPrice}
-                    </Typography>
-                    
-                    <Badge
-                      badgeContent={`خصم ${Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%`}
-                      color="error"
-                      sx={{
-                        '& .MuiBadge-badge': {
-                          fontSize: { xs: '0.6rem', sm: '0.7rem', md: '0.75rem' },
-                          padding: { xs: '0 4px', sm: '0 6px' },
-                          minWidth: { xs: 'auto', sm: '20px' }
-                        }
-                      }}
-                    />
-                  </>
+                        عذراً، المتصفح لا يدعم تشغيل هذا الفيديو.
+                    </video>
+                ) : isAudio ? (
+                    <Box sx={{ p: 3, textAlign: 'center' }}>
+                        <AudiotrackIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }}/>
+                        <audio src={url} controls style={{ width: '100%' }} />
+                    </Box>
+                ) : (
+                    <img src={url} alt={item.originalAlt} style={mediaStyles} />
                 )}
-              </Box>
-
-              {/* Stock Information */}
-              {!product.isVirtual && (
-                <Typography 
-                  variant="body2" 
-                  color="text.secondary" 
-                  sx={{ 
-                    mt: { xs: 2, sm: 3 },
-                    fontSize: { xs: '0.8rem', sm: '0.9rem', md: '0.875rem' },
-                    p: { xs: 1, sm: 1.5 },
-                    bgcolor: 'grey.50',
-                    borderRadius: { xs: 1, sm: 1.5 },
-                    border: '1px solid',
-                    borderColor: 'grey.200'
-                  }}
-                >
-                  متوفر في المخزون: {product.countInStock} قطعة
-                </Typography>
-              )}
             </Box>
-          </Grid>
-        </Grid>
-      </Box>
-    </motion.div>
-  );
+        </div>
+    );
+};
+
+
+// دالة مخصصة ومحسنة لعرض الصور المصغرة
+const renderCustomThumb = (item) => {
+    const url = item.thumbnail;
+    const isVideo = /\.(mp4|mov|avi|mpeg|webm)$/i.test(url);
+    const isAudio = /\.(mp3|wav|ogg|aac|flac)$/i.test(url);
+    const thumbnailUrl = isAudio ? item.mainImageThumbnail : item.thumbnail;
+
+    return (
+        <Box sx={{ position: 'relative', width: '100%', height: '100%', borderRadius: '12px', overflow: 'hidden' }}>
+            <img className="image-gallery-thumbnail-image" src={thumbnailUrl} alt={item.thumbnailAlt} />
+            {(isVideo || isAudio) && (
+                <Box sx={{
+                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'white',
+                }}>
+                    {isVideo ? <PlayCircleOutlineIcon /> : <AudiotrackIcon />}
+                </Box>
+            )}
+        </Box>
+    );
+};
+
+// باقي الدوال المساعدة والأنماط بدون تغيير
+const createArrowButton = (direction, isMobile) => (onClick, disabled) => {
+    return ( <motion.button type="button" onClick={onClick} disabled={disabled} whileHover={!disabled ? { scale: 1.1, x: direction === 'left' ? -3 : 3 } : {}} whileTap={!disabled ? { scale: 0.95 } : {}} style={{ background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: '16px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', width: isMobile ? 44 : 52, height: isMobile ? 44 : 52, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: disabled ? 'not-allowed' : 'pointer', position: 'absolute', top: '50%', [direction]: isMobile ? 8 : 16, transform: 'translateY(-50%)', zIndex: 10, backdropFilter: 'blur(10px)', opacity: disabled ? 0.4 : 1, transition: 'all 0.3s' }}> <span style={{ fontSize: isMobile ? 18 : 22, fontWeight: 'bold', color: '#333' }}> {direction === 'left' ? '❮' : '❯'} </span> </motion.button> );
+};
+const pageVariants = { initial: { opacity: 0, y: 40 }, in: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.25, 1, 0.5, 1], staggerChildren: 0.1 } }, out: { opacity: 0, y: -20, transition: { duration: 0.4 } } };
+const childVariants = { initial: { opacity: 0, y: 20 }, in: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.25, 1, 0.5, 1] } } };
+
+// ====================================================================
+// المكون الرئيسي للصفحة
+// ====================================================================
+const ProductDetailsPage = () => {
+    const dispatch = useDispatch();
+    const { id: productId } = useParams();
+    const { product, status, error } = useSelector((state) => state.productDetails);
+    const [isFavorite, setIsFavorite] = useState(false);
+
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+    useEffect(() => {
+        if (productId) dispatch(fetchProductDetails(productId));
+    }, [dispatch, productId]);
+
+    const galleryItems = useMemo(() => {
+        if (!product) return [];
+        const allMedia = Array.from(new Set([product.image, ...(product.images || [])].filter(Boolean)));
+        const mainImageThumbnail = `${import.meta.env.VITE_BACKEND_URL}${product.image}`;
+
+        return allMedia.map(mediaUrl => {
+            const fullUrl = `${import.meta.env.VITE_BACKEND_URL}${mediaUrl}`;
+            const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fullUrl);
+            const item = { original: fullUrl, thumbnail: isImage ? fullUrl : mainImageThumbnail, mainImageThumbnail, originalAlt: product.name, thumbnailAlt: product.name };
+            item.renderThumbInner = () => renderCustomThumb(item);
+            return item;
+        });
+    }, [product]);
+
+    if (status === 'loading') return <ProductDetailsSkeleton />;
+    if (status === 'failed') return <Message variant="danger">{error}</Message>;
+    if (!product) return <Message>المنتج غير موجود</Message>;
+
+    const handleShare = () => {
+        if (navigator.share) {
+            navigator.share({ title: product.name, text: product.description, url: window.location.href });
+        } else {
+            navigator.clipboard.writeText(window.location.href);
+            // يمكنك إضافة تنبيه هنا لإعلام المستخدم بالنسخ
+        }
+    };
+    
+    return (
+        <motion.div initial="initial" animate="in" exit="out" variants={pageVariants}>
+            <Box sx={{ px: { xs: 1.5, sm: 3 }, py: { xs: 2, sm: 3 }, maxWidth: '1600px', margin: '0 auto' }}>
+                <motion.div variants={childVariants}>
+                    <Breadcrumbs aria-label="breadcrumb" sx={{ mb: { xs: 2, sm: 3 }, fontSize: { xs: '0.8rem', sm: '1rem' } }}>
+                        <MuiLink component={RouterLink} underline="hover" color="inherit" to="/">الرئيسية</MuiLink>
+                        {product?.category && <MuiLink component={RouterLink} underline="hover" color="inherit" to={`/?category=${product.category._id}`}>{product.category.name}</MuiLink>}
+                        <Typography color="text.primary">{product?.name}</Typography>
+                    </Breadcrumbs>
+                </motion.div>
+                
+                <Grid container spacing={{ xs: 3, md: 5 }}>
+                    <Grid item xs={12} md={7} lg={8}>
+                        <motion.div variants={childVariants}>
+                            <ImageGallery
+                                items={galleryItems}
+                                renderItem={renderMedia} // استخدام دالة العرض الموحدة
+                                showPlayButton={false}
+                                showFullscreenButton={!isMobile}
+                                thumbnailPosition="bottom"
+                                isRTL={true}
+                                renderLeftNav={createArrowButton('left', isMobile)}
+                                renderRightNav={createArrowButton('right', isMobile)}
+                                showThumbnails={galleryItems.length > 1}
+                                showNav={galleryItems.length > 1}
+                            />
+                        </motion.div>
+                    </Grid>
+                    <Grid item xs={12} md={5} lg={4}>
+                        <motion.div variants={childVariants}>
+                            <Card elevation={0} sx={{ background: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(20px)', borderRadius: '24px', border: '1px solid rgba(0,0,0,0.1)' }}>
+                                <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                                        <Tooltip title="إضافة للمفضلة"><IconButton onClick={() => setIsFavorite(!isFavorite)}>{isFavorite ? <FavoriteIcon color="error" /> : <FavoriteBorderIcon />}</IconButton></Tooltip>
+                                        <Tooltip title="مشاركة"><IconButton onClick={handleShare}><ShareIcon /></IconButton></Tooltip>
+                                    </Box>
+                                    <Typography variant="h3" component="h1" gutterBottom sx={{ fontSize: { xs: '1.8rem', sm: '2.5rem' }, fontWeight: 800 }}>{product.name}</Typography>
+                                    {product.category && <Chip label={product.category.name} color="primary" sx={{ mb: 3, fontWeight: 'bold' }} />}
+                                    <Divider sx={{ my: 3 }} />
+                                    <Typography variant="body1" paragraph sx={{ fontSize: { xs: '1rem', md: '1.1rem' }, lineHeight: 1.8, color: 'text.secondary', mb: 3 }}>{product.description}</Typography>
+                                    {product.executionTime && (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, p: 2, bgcolor: 'action.hover', borderRadius: 2 }}>
+                                            <AccessTimeIcon color="primary" sx={{ mr: 1.5 }} />
+                                            <Typography variant="subtitle1" component="span" sx={{ fontWeight: 'bold', mr: 1 }}>وقت التنفيذ:</Typography>
+                                            <Typography variant="body1">{product.executionTime}</Typography>
+                                        </Box>
+                                    )}
+                                    <Divider sx={{ my: 3 }} />
+                                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 2, my: 3 }}>
+                                        <Typography variant="h4" component="p" color="primary.main" fontWeight="bold">${product.price}</Typography>
+                                        {product.originalPrice && product.originalPrice > product.price && (
+                                            <Badge badgeContent={`خصم ${Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%`} color="error">
+                                                <Typography variant="h6" color="text.secondary" sx={{ textDecoration: 'line-through' }}>${product.originalPrice}</Typography>
+                                            </Badge>
+                                        )}
+                                    </Box>
+                                    {!product.isVirtual && ( <Typography variant="body2" sx={{ p: 1.5, bgcolor: 'action.selected', borderRadius: 1, textAlign: 'center' }}> متوفر في المخزون: {product.countInStock} قطعة </Typography> )}
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+                    </Grid>
+                </Grid>
+            </Box>
+        </motion.div>
+    );
 };
 
 export default ProductDetailsPage;

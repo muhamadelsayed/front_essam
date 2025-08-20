@@ -96,3 +96,7 @@ body {
         margin-top: -60px !important;
     }
 }
+audio{
+    min-width: 50% !important;
+    width: revert !important;
+}

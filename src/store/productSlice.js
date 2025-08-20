@@ -26,10 +26,7 @@ export const fetchProducts = createAsyncThunk('products/fetchProducts',
 export const deleteProduct = createAsyncThunk(
   'products/deleteProduct',
   async (productId, { getState }) => {
-    // هذا الجزء هو المهم: جلب التوكن من حالة المصادقة
     const { auth: { userInfo } } = getState();
-    console.log(userInfo);
-
     const config = {
       headers: {
         Authorization: `Bearer ${userInfo.token}`,
@@ -44,9 +41,9 @@ export const createProduct = createAsyncThunk(
   'products/createProduct',
   async (productData, { getState }) => {
     const { auth: { userInfo } } = getState();
+    // ✅ صحيح: لا يوجد Content-Type هنا
     const config = {
       headers: {
-        'Content-Type': 'multipart/form-data',
         Authorization: `Bearer ${userInfo.token}`,
       },
     };
@@ -59,9 +56,10 @@ export const updateProduct = createAsyncThunk(
   'products/updateProduct',
   async ({ productId, productData }, { getState }) => {
     const { auth: { userInfo } } = getState();
+    // **===> الإصلاح الرئيسي هنا <===**
+    // تم حذف 'Content-Type': 'multipart/form-data'
     const config = {
       headers: {
-        'Content-Type': 'multipart/form-data',
         Authorization: `Bearer ${userInfo.token}`,
       },
     };
