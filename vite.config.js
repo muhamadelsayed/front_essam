@@ -1,41 +1,44 @@
 // client/vite.config.js
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Vite لا يقوم بتحميل .env تلقائيًا في هذا الملف، لذا نستخدم loadEnv
-export default defineConfig(({ mode }) => {
-  // mode هو 'development' عند تشغيل `npm run dev` و 'production' عند `npm run build`
-  const env = loadEnv(mode, process.cwd(), '');
+// 1. الرابط الثابت للإنتاج (Hardcoded URL)
+// هذا هو المكان الوحيد الذي تحتاج فيه إلى كتابة رابط Railway.
+const backendUrl = 'https://khamsatessam-production-9ef9.up.railway.app'; 
 
-  return {
-    plugins: [react()],
-    server: {
-      proxy: {
-        // البروكسي سيعتمد على الرابط من ملف .env
-        '/api': {
-          target: env.VITE_BACKEND_URL_DEV,
-          changeOrigin: true,
-        },
-        '/uploads': { // أبقِ هذا البروكسي للصور في بيئة التطوير
-          target: env.VITE_BACKEND_URL_DEV,
-          changeOrigin: true,
-        }
-      },
+export default defineConfig({
+  plugins: [react()],
+
+  // 2. إعدادات خادم التطوير المحلي
+  server: {
+    // البروكسي يقوم بتوجيه طلبات /api من localhost:5173 إلى localhost:5000
+    // هذا يعمل فقط عند تشغيل `npm run dev` ومع المسارات النسبية
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+      }
     },
-    // حقن المتغيرات في كود الواجهة الأمامية
-    define: {
-      // **الإصلاح هنا: لم نعد بحاجة لـ process.env.NODE_ENV**
-      // Vite يعطينا 'mode' الذي يحدد البيئة بشكل أفضل
-      'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
-        mode === 'production'
-          ? env.VITE_BACKEND_URL_PROD  // استخدم رابط الإنتاج
-          : ''                          // استخدم البروكسي في التطوير
-      ),
-      'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
-        mode === 'production'
-          ? env.VITE_BACKEND_URL_PROD  // رابط كامل للصور
-          : env.VITE_BACKEND_URL_DEV   // رابط محلي للصور
-      ),
-    },
-  };
+  },
+
+  // 3. تعريف المتغيرات العامة
+  define: {
+    // **هذا للمسارات (API routes)**
+    // سيكون سلسلة فارغة في التطوير (لتفعيل البروكسي)
+    // وسيكون رابط Railway الكامل في الإنتاج
+    'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
+      process.env.NODE_ENV === 'production' 
+        ? backendUrl 
+        : 'http://localhost:5000' 
+    ),
+    
+    // **وهذا للملفات (الصور)**
+    // سيكون http://localhost:5000 في التطوير
+    // وسيكون رابط Railway الكامل في الإنتاج
+    'import.meta.env.VITE_BACKEND_URL': JSON.stringify(
+      process.env.NODE_ENV === 'production'
+        ? backendUrl
+        : 'http://localhost:5000'
+    )
+  },
 });
