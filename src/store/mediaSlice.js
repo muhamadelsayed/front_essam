@@ -4,61 +4,55 @@ import axios from '../api/axios';
 
 const initialState = {
   files: [],
+  page: 1,
+  pages: 1,
   status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
-  uploadStatus: 'idle', // حالة الرفع منفصلة
   error: null,
 };
 
-// --- Thunks ---
-export const fetchMedia = createAsyncThunk('media/fetchMedia', async (_, { getState }) => {
+// **تحديث: Thunk الآن يرسل رقم الصفحة ويستقبل بيانات الترقيم**
+export const fetchMedia = createAsyncThunk('media/fetchMedia', async ({ page = 1 }, { getState }) => {
   const { auth: { userInfo } } = getState();
   const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-  const { data } = await axios.get('/api/media', config);
-  return data;
+  const { data } = await axios.get(`/api/media/files?page=${page}`, config);
+  return data; // إرجاع الكائن الكامل { mediaFiles, page, pages }
 });
 
-export const uploadMedia = createAsyncThunk('media/uploadMedia', async (file, { getState }) => {
-  const { auth: { userInfo } } = getState();
-  const formData = new FormData();
-  formData.append('file', file); // اسم الحقل يجب أن يطابق ما يتوقعه multer ('file')
-  const config = { headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${userInfo.token}` } };
-  const { data } = await axios.post('/api/media/upload', formData, config);
-  return data;
-});
-
-export const deleteMedia = createAsyncThunk('media/deleteMedia', async (id, { getState }) => {
-  const { auth: { userInfo } } = getState();
-  const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
-  await axios.delete(`/api/media/${id}`, config);
-  return id;
-});
-
-// --- Slice ---
 const mediaSlice = createSlice({
   name: 'media',
   initialState,
-  reducers: {},
+  reducers: {
+    // **إضافة: Reducer لإعادة تعيين الحالة عند فتح النافذة**
+    resetMediaState: (state) => {
+        state.files = [];
+        state.page = 1;
+        state.pages = 1;
+        state.status = 'idle';
+        state.error = null;
+    }
+  },
   extraReducers: (builder) => {
     builder
-      // Fetch
-      .addCase(fetchMedia.pending, (state) => { state.status = 'loading'; })
+      .addCase(fetchMedia.pending, (state) => {
+        state.status = 'loading';
+      })
       .addCase(fetchMedia.fulfilled, (state, action) => {
         state.status = 'succeeded';
-        state.files = action.payload;
+        // **تحديث: دمج النتائج الجديدة بدلاً من استبدالها**
+        if (action.payload.page === 1) {
+            state.files = action.payload.mediaFiles;
+        } else {
+            state.files = [...state.files, ...action.payload.mediaFiles];
+        }
+        state.page = action.payload.page;
+        state.pages = action.payload.pages;
       })
-      .addCase(fetchMedia.rejected, (state, action) => { state.status = 'failed'; state.error = action.error.message; })
-      // Upload
-      .addCase(uploadMedia.pending, (state) => { state.uploadStatus = 'loading'; })
-      .addCase(uploadMedia.fulfilled, (state, action) => {
-        state.uploadStatus = 'succeeded';
-        state.files.unshift(action.payload); // إضافة الملف الجديد في بداية المصفوفة
-      })
-      .addCase(uploadMedia.rejected, (state, action) => { state.uploadStatus = 'failed'; state.error = action.error.message; })
-      // Delete
-      .addCase(deleteMedia.fulfilled, (state, action) => {
-        state.files = state.files.filter(file => file._id !== action.payload);
+      .addCase(fetchMedia.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.error.message;
       });
   },
 });
 
+export const { resetMediaState } = mediaSlice.actions;
 export default mediaSlice.reducer;

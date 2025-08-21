@@ -2,6 +2,7 @@
 import { Outlet } from 'react-router-dom';
 import { Grid, Box, Paper } from '@mui/material';
 import DashboardSidebar from './DashboardSidebar';
+import Footer from '../Footer';
 
 
 const DashboardLayout = () => {
@@ -54,6 +55,7 @@ const DashboardLayout = () => {
         >
           <Outlet />
         </Paper>
+      <Footer />
       </Box>
     </Box>
   );

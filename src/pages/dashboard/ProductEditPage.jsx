@@ -6,24 +6,40 @@ import { motion } from 'framer-motion';
 import { createProduct, updateProduct } from '../../store/productSlice';
 import { fetchProductDetails } from '../../store/productDetailsSlice';
 import { fetchCategories } from '../../store/categorySlice';
+import MediaLibraryModal from '../../components/dashboard/MediaLibraryModal'; // <-- استيراد
 import {
   Box, TextField, Button, Typography, Grid, CircularProgress, Alert,
-  Select, MenuItem, FormControl, InputLabel, Paper, FormControlLabel, Checkbox, Divider
+  Select, MenuItem, FormControl, InputLabel, Paper, FormControlLabel, Checkbox, Divider, IconButton, Tooltip
 } from '@mui/material';
-import PhotoCamera from '@mui/icons-material/PhotoCamera';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
+import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
+import DeleteIcon from '@mui/icons-material/Delete';
+import CloseIcon from '@mui/icons-material/Close';
 
 // مكون صغير لعرض معاينة الوسائط
-const MediaPreview = ({ src, file }) => {
-    const fileType = file ? file.type : '';
-    const srcExt = typeof src === 'string' ? src.split('.').pop().toLowerCase() : '';
-    const isVideo = fileType.startsWith('video/') || ['mp4', 'mov', 'avi', 'mpeg'].includes(srcExt);
-    const isAudio = fileType.startsWith('audio/') || ['mp3', 'wav', 'ogg'].includes(srcExt);
-    const style = { width: 80, height: 80, objectFit: 'cover', borderRadius: 2, boxShadow: 1 };
-    
-    if (isVideo) return <video src={src} style={style} controls />;
-    if (isAudio) return <audio src={src} style={{ width: 80, height: 80 }} controls />;
-    return <Box component="img" src={src} sx={style} />;
+const MediaPreview = ({ src, onRemove, sx }) => {
+    const isVideo = /\.(mp4|mov|avi|mpeg|webm)$/i.test(src);
+    const isAudio = /\.(mp3|wav|ogg|aac|flac)$/i.test(src);
+    const baseStyle = { width: '100%', height: '100%', objectFit: 'cover', borderRadius: 2, display: 'block' };
+
+    return (
+        <Box sx={{ position: 'relative', ...sx }}>
+            {isVideo ? (
+                <video src={src} style={baseStyle} controls />
+            ) : isAudio ? (
+                <Box sx={{ ...baseStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.200' }}>
+                    <audio src={src} controls style={{ width: '100%' }} />
+                </Box>
+            ) : (
+                <Box component="img" src={src} sx={baseStyle} />
+            )}
+            {onRemove && (
+                 <IconButton size="small" onClick={onRemove} sx={{ position: 'absolute', top: 2, right: 2, color: 'white', backgroundColor: 'rgba(0,0,0,0.6)', '&:hover': { backgroundColor: 'rgba(0,0,0,0.8)'} }}>
+                    <CloseIcon fontSize="small"/>
+                </IconButton>
+            )}
+        </Box>
+    );
 };
 
 const ProductEditPage = () => {
@@ -32,6 +48,7 @@ const ProductEditPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
+  // حالات النموذج
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [originalPrice, setOriginalPrice] = useState('');
@@ -40,12 +57,15 @@ const ProductEditPage = () => {
   const [countInStock, setCountInStock] = useState('');
   const [isVirtual, setIsVirtual] = useState(false);
   const [executionTime, setExecutionTime] = useState('');
-  
-  const [imageFile, setImageFile] = useState(null);
-  const [imagesFiles, setImagesFiles] = useState([]); // سيحتوي على كائنات File
-  const [imagePreview, setImagePreview] = useState('');
-  const [imagesPreview, setImagesPreview] = useState([]); // سيحتوي على كائنات للمعاينة
   const [formError, setFormError] = useState('');
+  
+  // حالات الوسائط
+  const [image, setImage] = useState({ file: null, url: '' });
+  const [gallery, setGallery] = useState([]);
+  
+  // حالات النافذة المنبثقة
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [mediaTarget, setMediaTarget] = useState(null);
   
   const { product, status: productDetailsStatus } = useSelector((state) => state.productDetails);
   const { status: productListStatus, error: productListError } = useSelector((state) => state.productList);
@@ -68,37 +88,47 @@ const ProductEditPage = () => {
       setCountInStock(product.countInStock || '');
       setIsVirtual(product.isVirtual || false);
       setExecutionTime(product.executionTime || '');
-      if (product.image) setImagePreview(`${import.meta.env.VITE_BACKEND_URL}${product.image}`);
+      if (product.image) setImage({ file: null, url: `${import.meta.env.VITE_BACKEND_URL}${product.image}` });
       if (product.images?.length) {
-        setImagesPreview(product.images.map(img => ({ url: `${import.meta.env.VITE_BACKEND_URL}${img}`, file: null })));
+        setGallery(product.images.map(imgUrl => ({ file: null, url: `${import.meta.env.VITE_BACKEND_URL}${imgUrl}` })));
       }
     }
   }, [product, isEditMode]);
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
-    }
+  const handleOpenModal = (target) => {
+    setMediaTarget(target);
+    setIsModalOpen(true);
   };
   
-  const handleImagesChange = (e) => {
+  const handleFileUpload = (e, target) => {
     const files = Array.from(e.target.files);
-    if ((imagesFiles.length + files.length) > 10) {
-      setFormError('لا يمكن رفع أكثر من 10 ملفات للمعرض.');
-      return;
+    if (target === 'image') {
+        setImage({ file: files[0], url: URL.createObjectURL(files[0]) });
+    } else {
+        const newItems = files.map(file => ({ file, url: URL.createObjectURL(file) }));
+        setGallery(prev => [...prev, ...newItems]);
     }
-    setFormError('');
-    setImagesFiles(prev => [...prev, ...files]);
-    setImagesPreview(prev => [...prev, ...files.map(file => ({ url: URL.createObjectURL(file), file }))]);
   };
+
+  const handleMediaSelect = (selectedUrls) => {
+      const formattedUrls = selectedUrls.map(url => `${import.meta.env.VITE_BACKEND_URL}${url}`);
+      if (mediaTarget === 'image') {
+          setImage({ file: null, url: formattedUrls[0] });
+      } else {
+          const newItems = formattedUrls.map(url => ({ file: null, url }));
+          setGallery(prev => [...prev, ...newItems]);
+      }
+  };
+
+  const handleRemoveGalleryItem = (index) => {
+      setGallery(prev => prev.filter((_, i) => i !== index));
+  }
 
   const submitHandler = (e) => {
     e.preventDefault();
     setFormError('');
-    if (!isEditMode && !imageFile) {
-        setFormError('يجب رفع صورة أو مقطع رئيسي للمنتج.');
+    if (!image.url && !image.file) {
+        setFormError('يجب تحديد صورة أو مقطع رئيسي للمنتج.');
         return;
     }
 
@@ -112,25 +142,23 @@ const ProductEditPage = () => {
     formData.append('isVirtual', isVirtual);
     formData.append('executionTime', executionTime);
 
-    // **تأكد من أن أسماء الحقول هنا تطابق تماماً ما في الواجهة الخلفية**
-    if (imageFile) {
-      formData.append('image', imageFile);
-    }
-    if (imagesFiles.length > 0) {
-        imagesFiles.forEach(file => {
-            formData.append('images', file);
-        });
+    if (image.file) {
+      formData.append('image', image.file);
+    } else if (image.url) {
+      formData.append('existingImage', image.url.replace(`${import.meta.env.VITE_BACKEND_URL}`, ''));
     }
 
+    const newGalleryFiles = gallery.filter(item => item.file).map(item => item.file);
+    const existingGalleryUrls = gallery.filter(item => !item.file).map(item => item.url.replace(`${import.meta.env.VITE_BACKEND_URL}`, ''));
+    
+    newGalleryFiles.forEach(file => formData.append('images', file));
+    formData.append('existingImages', JSON.stringify(existingGalleryUrls));
+    
     const action = isEditMode
       ? updateProduct({ productId, productData: formData })
       : createProduct(formData);
-    
-    dispatch(action).then((res) => {
-        if (!res.error) {
-            navigate('/dashboard/products');
-        }
-    });
+      
+    dispatch(action).then(res => !res.error && navigate('/dashboard/products'));
   };
 
   if (productDetailsStatus === 'loading' && isEditMode) return <CircularProgress />;
@@ -166,28 +194,35 @@ const ProductEditPage = () => {
                 <FormControlLabel control={<Checkbox checked={isVirtual} onChange={(e) => setIsVirtual(e.target.checked)} />} label="منتج افتراضي/خدمة (لا يتطلب مخزون)" sx={{ mt: 1 }} />
               </Paper>
             </Grid>
+
             <Grid item xs={12} md={4}>
-              <Paper elevation={2} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-                <Typography variant="h6" gutterBottom>الوسائط</Typography>
-                <Button variant="outlined" component="label" startIcon={<PhotoCamera />} fullWidth sx={{ mb: 2 }}>
-                  الصورة/المقطع الرئيسي
-                  <input type="file" hidden onChange={handleImageChange} accept="image/*,video/*,audio/*" />
+              <Paper elevation={2} sx={{ p: 2, mb: 2, borderRadius: 2 }}>
+                <Typography variant="h6" gutterBottom>الصورة/المقطع الرئيسي</Typography>
+                {image.url && <MediaPreview src={image.url} sx={{ height: 200, mb: 1 }} />}
+                <Button variant="outlined" component="label" startIcon={<AddPhotoAlternateIcon />} fullWidth sx={{ mt: 1 }}>
+                  تحميل من الجهاز
+                  <input type="file" hidden onChange={(e) => handleFileUpload(e, 'image')} accept="image/*,video/*,audio/*" />
                 </Button>
-                {imagePreview && ( <MediaPreview src={imagePreview} file={imageFile} /> )}
-                <Divider sx={{ my: 2 }} />
-                <Button variant="outlined" component="label" startIcon={<AddPhotoAlternateIcon />} fullWidth>
-                  معرض الوسائط ({imagesPreview.length}/10)
-                  <input type="file" hidden multiple onChange={handleImagesChange} accept="image/*,video/*,audio/*" />
-                </Button>
-                {imagesPreview.length > 0 && (
-                  <Box sx={{ display: 'flex', gap: 1, mt: 2, flexWrap: 'wrap' }}>
-                    {imagesPreview.map((preview, index) => (
-                      <MediaPreview key={index} src={preview.url} file={preview.file} />
-                    ))}
-                  </Box>
-                )}
+                <Button variant="outlined" startIcon={<PhotoLibraryIcon />} onClick={() => handleOpenModal('image')} fullWidth sx={{ mt: 1 }}>مكتبة الوسائط</Button>
               </Paper>
-              <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
+              
+              <Paper elevation={2} sx={{ p: 2, borderRadius: 2 }}>
+                <Typography variant="h6" gutterBottom>معرض الوسائط ({gallery.length}/10)</Typography>
+                <Grid container spacing={1} sx={{ mt: 1 }}>
+                  {gallery.map((item, index) => (
+                    <Grid item xs={4} key={index}>
+                      <MediaPreview src={item.url} onRemove={() => handleRemoveGalleryItem(index)} sx={{ height: 80 }} />
+                    </Grid>
+                  ))}
+                </Grid>
+                <Button variant="outlined" component="label" startIcon={<AddPhotoAlternateIcon />} fullWidth sx={{ mt: 2 }}>
+                  تحميل من الجهاز
+                  <input type="file" hidden multiple onChange={(e) => handleFileUpload(e, 'gallery')} accept="image/*,video/*,audio/*" />
+                </Button>
+                <Button variant="outlined" startIcon={<PhotoLibraryIcon />} onClick={() => handleOpenModal('gallery')} fullWidth sx={{ mt: 1 }}>مكتبة الوسائط</Button>
+              </Paper>
+
+              <Paper elevation={2} sx={{ p: 3, borderRadius: 2, mt: 2 }}>
                 <FormControl fullWidth>
                   <InputLabel>القسم</InputLabel>
                   <Select value={category} label="القسم" onChange={(e) => setCategory(e.target.value)}>
@@ -204,6 +239,13 @@ const ProductEditPage = () => {
             </Button>
           </Box>
         </Box>
+        
+        <MediaLibraryModal
+            open={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onSelect={handleMediaSelect}
+            multiSelect={mediaTarget === 'gallery'}
+        />
       </Box>
     </motion.div>
   );

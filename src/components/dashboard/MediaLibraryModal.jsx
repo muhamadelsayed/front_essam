@@ -1,98 +1,97 @@
 // src/components/dashboard/MediaLibraryModal.jsx
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchMedia, uploadMedia } from '../../store/mediaSlice';
+import { fetchMedia, resetMediaState } from '../../store/mediaSlice'; // **تحديث: استيراد resetMediaState**
 import {
-  Dialog, DialogTitle, DialogContent, Tabs, Tab, Box, Button,
-  Grid, Card, CardMedia, CardActionArea, CircularProgress, LinearProgress, Typography, IconButton
+  Dialog, DialogTitle, DialogContent, DialogActions, Box, Button, Grid,
+  Card, CardMedia, CardActionArea, CircularProgress, Typography, IconButton
 } from '@mui/material';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloseIcon from '@mui/icons-material/Close';
 
-const MediaLibraryModal = ({ open, onClose, onSelect }) => {
+const MediaFile = ({ file, onSelect, isSelected }) => {
+    const isVideo = file.fileType === 'video';
+    return (
+        <CardActionArea onClick={() => onSelect(file.fileUrl)}>
+            <Card sx={{ position: 'relative', border: isSelected ? '3px solid' : '3px solid transparent', borderColor: 'primary.main' }}>
+                {isVideo ? (
+                    <CardMedia component="video" src={`${import.meta.env.VITE_BACKEND_URL}${file.fileUrl}`} height="140" />
+                ) : (
+                    <CardMedia component="img" image={`${import.meta.env.VITE_BACKEND_URL}${file.fileUrl}`} height="140" sx={{ objectFit: 'cover' }} />
+                )}
+                {isSelected && (
+                    <CheckCircleIcon color="primary" sx={{ position: 'absolute', top: 5, right: 5, backgroundColor: 'white', borderRadius: '50%' }}/>
+                )}
+            </Card>
+        </CardActionArea>
+    );
+};
+
+const MediaLibraryModal = ({ open, onClose, onSelect, multiSelect = false }) => {
   const dispatch = useDispatch();
-  const { files, status, uploadStatus } = useSelector((state) => state.media);
-  const [tab, setTab] = useState(0);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const { files, status, page, pages } = useSelector((state) => state.media);
+  const [selected, setSelected] = useState([]);
 
   useEffect(() => {
     if (open) {
-      dispatch(fetchMedia());
+      // **تحديث: إعادة تعيين الحالة ثم جلب الصفحة الأولى**
+      dispatch(resetMediaState()); 
+      dispatch(fetchMedia({ page: 1 }));
     }
   }, [open, dispatch]);
 
-  const handleTabChange = (event, newValue) => { setTab(newValue); };
-  const handleFileSelect = (file) => { setSelectedFile(file); };
-  const handleConfirmSelection = () => { onSelect(selectedFile); onClose(); };
-
-  const handleUpload = async (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      // استدعاء thunk الرفع وانتظار النتيجة
-      const resultAction = await dispatch(uploadMedia(file));
-      // إذا نجح الرفع، قم بتحديد الملف الجديد تلقائيًا
-      if (uploadMedia.fulfilled.match(resultAction)) {
-        onSelect(resultAction.payload); // تحديد وإغلاق مباشرة
-        onClose();
-      }
+  const handleSelect = (fileUrl) => {
+    if (multiSelect) {
+      setSelected(prev => prev.includes(fileUrl) ? prev.filter(f => f !== fileUrl) : [...prev, fileUrl]);
+    } else {
+      setSelected([fileUrl]);
     }
+  };
+  
+  // **دالة جديدة لتحميل المزيد من الوسائط**
+  const handleLoadMore = () => {
+      if (page < pages && status !== 'loading') {
+          dispatch(fetchMedia({ page: page + 1 }));
+      }
+  };
+
+  const handleConfirm = () => {
+    onSelect(selected);
+    onClose();
+    setSelected([]);
   };
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <DialogTitle>
         مكتبة الوسائط
-        <IconButton onClick={onClose}><CloseIcon /></IconButton>
+        <IconButton onClick={onClose} sx={{ position: 'absolute', right: 8, top: 8 }}><CloseIcon /></IconButton>
       </DialogTitle>
       <DialogContent dividers>
-        <Tabs value={tab} onChange={handleTabChange} sx={{ mb: 2 }}>
-          <Tab label="مكتبة الوسائط" />
-          <Tab label="رفع ملف جديد" />
-        </Tabs>
-
-        {/* تبويب مكتبة الوسائط */}
-        {tab === 0 && (
-          <Box>
-            {status === 'loading' && <CircularProgress />}
-            <Grid container spacing={2}>
-              {files.map((file) => (
-                <Grid item key={file._id} xs={4} sm={3} md={2}>
-                  <CardActionArea onClick={() => handleFileSelect(file)}>
-                    <Card sx={{ border: selectedFile?._id === file._id ? '2px solid' : '2px solid transparent', borderColor: 'primary.main' }}>
-                      <CardMedia
-                        component="img"
-                        height="120"
-                        image={`${import.meta.env.VITE_BACKEND_URL}${file.fileUrl}`}
-                        alt={file.fileName}
-                        sx={{ objectFit: 'cover' }}
-                      />
-                    </Card>
-                  </CardActionArea>
-                </Grid>
-              ))}
+        <Grid container spacing={2}>
+          {files.map((file) => (
+            <Grid item key={file._id} xs={6} sm={4} md={3}>
+              <MediaFile file={file} onSelect={handleSelect} isSelected={selected.includes(file.fileUrl)} />
             </Grid>
-          </Box>
-        )}
+          ))}
+        </Grid>
 
-        {/* تبويب رفع ملف جديد */}
-        {tab === 1 && (
-          <Box sx={{ p: 3, textAlign: 'center' }}>
-            <Button variant="contained" component="label" disabled={uploadStatus === 'loading'}>
-              اختر ملفًا من جهازك
-              <input type="file" hidden onChange={handleUpload} />
-            </Button>
-            {uploadStatus === 'loading' && <LinearProgress sx={{ mt: 2 }} />}
-          </Box>
+        {/* **إظهار مؤشر التحميل عند طلب صفحات إضافية** */}
+        {status === 'loading' && <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}><CircularProgress /></Box>}
+        
+        {/* **إظهار زر "عرض المزيد"** */}
+        {page < pages && status !== 'loading' && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+                <Button onClick={handleLoadMore} variant="outlined">عرض المزيد</Button>
+            </Box>
         )}
       </DialogContent>
-      
-      {/* زر التأكيد يظهر فقط في تبويب المكتبة */}
-      {tab === 0 && (
-          <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end' }}>
-              <Button onClick={handleConfirmSelection} variant="contained" disabled={!selectedFile}>
-                  اختيار الملف المحدد
-              </Button>
-          </Box>
-      )}
+      <DialogActions>
+        <Button onClick={onClose}>إلغاء</Button>
+        <Button onClick={handleConfirm} variant="contained" disabled={selected.length === 0}>
+          تأكيد الاختيار ({selected.length})
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };

@@ -7,6 +7,7 @@ import categoryReducer from './categorySlice'; // <-- استيراد
 import { userSliceReducer } from './userSlice'; // <-- استيراد
 import settingsSliceReducer from './settingsSlice'; // <-- استيراد
 import dashboardReducer from './dashboardSlice'; // <-- استيراد
+import mediaReducer from './mediaSlice'; // <-- إضافة جديدة
 
 
 export const store = configureStore({
@@ -18,5 +19,6 @@ export const store = configureStore({
     userList: userSliceReducer, // <-- إضافة
     settings: settingsSliceReducer, // <-- إضافة
     dashboard: dashboardReducer, // <-- إضافة
+    media: mediaReducer,
   },
 });
