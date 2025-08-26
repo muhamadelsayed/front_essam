@@ -8,7 +8,7 @@ import { userSliceReducer } from './userSlice'; // <-- استيراد
 import settingsSliceReducer from './settingsSlice'; // <-- استيراد
 import dashboardReducer from './dashboardSlice'; // <-- استيراد
 import mediaReducer from './mediaSlice'; // <-- إضافة جديدة
-
+import customCssReducer from './customCssSlice';
 
 export const store = configureStore({
   reducer: {
@@ -20,5 +20,6 @@ export const store = configureStore({
     settings: settingsSliceReducer, // <-- إضافة
     dashboard: dashboardReducer, // <-- إضافة
     media: mediaReducer,
+    customCss: customCssReducer,
   },
 });

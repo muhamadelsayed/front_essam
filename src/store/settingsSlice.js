@@ -7,6 +7,7 @@ const initialState = {
     siteName: 'متجري',
     logoUrl: '',
   },
+  publicCssRules: [],
   status: 'idle',
   error: null,
 };
@@ -28,6 +29,11 @@ export const updateSettings = createAsyncThunk('settings/updateSettings', async 
     return data;
 });
 
+export const fetchPublicCss = createAsyncThunk('settings/fetchPublicCss', async () => {
+    const { data } = await axios.get('/api/custom-css/public');
+    return data;
+});
+
 const settingsSlice = createSlice({
   name: 'settings',
   initialState,
@@ -43,7 +49,10 @@ const settingsSlice = createSlice({
       })
        .addCase(updateSettings.pending, (state) => {
           state.status = 'loading';
-       });
+       })
+       .addCase(fetchPublicCss.fulfilled, (state, action) => {
+        state.publicCssRules = action.payload;
+      });
   },
 });
 

@@ -1,5 +1,5 @@
 // src/components/editor/TiptapEditor.jsx
-import { useEditor, EditorContent, ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
+import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import { Node } from '@tiptap/core';
@@ -20,23 +20,33 @@ import VideocamIcon from '@mui/icons-material/Videocam';
 import AudiotrackIcon from '@mui/icons-material/Audiotrack';
 
 // ====================================================================
-// امتداد Tiptap المخصص للفيديو (نسخة مبسطة وموثوقة)
+// امتداد Tiptap المخصص للفيديو (نسخة محدثة ومصححة)
 // ====================================================================
 const CustomVideo = Node.create({
-  name: 'customVideo', // اسم فريد
+  name: 'customVideo',
   group: 'block',
   atom: true,
   
   addAttributes() {
     return {
-      src: {
-        default: null,
-      },
+      src: { default: null },
     };
   },
 
   parseHTML() {
-    return [{ tag: 'video[src]' }];
+    return [
+      {
+        tag: 'video',
+        getAttrs: (element) => {
+          // التحقق من أن العنصر هو <video> وأن له عنصر <source> بداخله
+          if (element instanceof HTMLVideoElement && element.querySelector('source')) {
+            return { src: element.querySelector('source').getAttribute('src') };
+          }
+          // إذا لم يتطابق، أرجع false لتجاهل هذا الوسم
+          return false;
+        },
+      },
+    ];
   },
 
   renderHTML({ HTMLAttributes }) {
@@ -59,17 +69,32 @@ const CustomVideo = Node.create({
 });
 
 // ====================================================================
-// امتداد Tiptap المخصص للصوت (نسخة مبسطة وموثوقة)
+// امتداد Tiptap المخصص للصوت (نسخة محدثة ومصححة)
 // ====================================================================
 const CustomAudio = Node.create({
-    name: 'customAudio', // اسم فريد
+    name: 'customAudio',
     group: 'block',
     atom: true,
     addAttributes() { return { src: { default: null } }; },
-    parseHTML() { return [{ tag: 'audio[src]' }]; },
+    
+    parseHTML() {
+        return [
+            {
+                tag: 'audio[src]',
+                getAttrs: (element) => {
+                    if (element instanceof HTMLAudioElement) {
+                        return { src: element.getAttribute('src') };
+                    }
+                    return false;
+                },
+            },
+        ];
+    },
+
     renderHTML({ HTMLAttributes }) {
         return ['audio', { ...HTMLAttributes, controls: 'true', style: 'width: 100%; margin: 1em 0;' }];
     },
+    
     addCommands() {
         return {
             addAudio: (options) => ({ tr, dispatch }) => {
@@ -106,7 +131,6 @@ const MenuBar = ({ editor }) => {
             const fullFileUrl = `${import.meta.env.VITE_BACKEND_URL}${data.imageUrl}`;
             const chain = editor.chain().focus();
             if (type === 'image') chain.setImage({ src: fullFileUrl }).run();
-            // **الإصلاح الرئيسي هنا: استدعاء الأوامر الجديدة**
             else if (type === 'video') chain.addVideo({ src: fullFileUrl }).run();
             else if (type === 'audio') chain.addAudio({ src: fullFileUrl }).run();
           }

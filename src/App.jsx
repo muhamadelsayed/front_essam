@@ -8,7 +8,7 @@ import { useDispatch } from 'react-redux'; // <-- استيراد
 // استيراد الهياكل
 import Layout from './components/Layout';
 import DashboardLayout from './components/dashboard/DashboardLayout';
-
+import StyleInjector from './components/StyleInjector';
 // استيراد المسارات المحمية
 import AdminRoute from './routing/AdminRoute';
 
@@ -24,14 +24,14 @@ import ProductListPage from './pages/dashboard/ProductListPage';
 import ProductEditPage from './pages/dashboard/ProductEditPage';
 import CategoryListPage from './pages/dashboard/CategoryListPage'; // <-- استيراد
 import UserListPage from './pages/dashboard/UserListPage'; // <-- استيراد
-import { fetchSettings } from './store/settingsSlice'; // <-- استيراد
+import { fetchSettings, fetchPublicCss } from './store/settingsSlice';
 import SettingsPage from './pages/dashboard/SettingsPage'; // استيراد
 import AboutUsPage from './pages/AboutUsPage'; // <-- استيراد
 import ContactPage from './pages/ContactPage'; // <-- استيراد
 import PaymentMethodsPage from './pages/PaymentMethodsPage'; // <-- استيراد
 import { Helmet } from 'react-helmet-async'; // <-- استيراد Helmet
 import { useSelector } from 'react-redux';
-
+import CustomCssPage from './pages/dashboard/CustomCssPage';
 
 
 // edit one -- re pass
@@ -44,6 +44,7 @@ function App() {
   const { settings } = useSelector((state) => state.settings);
   useEffect(() => {
     dispatch(fetchSettings());
+    dispatch(fetchPublicCss());
   }, [dispatch]);
 
   
@@ -56,6 +57,7 @@ function App() {
       </Helmet>
 
     <BrowserRouter>
+    <StyleInjector />
       <Routes>
         {/* المسارات العامة (مع الهيكل العام) */}
         <Route path="/" element={<Layout />}>
@@ -84,6 +86,7 @@ function App() {
             <Route path="categories" element={<CategoryListPage />} />
             <Route path="users" element={<UserListPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="css" element={<CustomCssPage />} />
           </Route>
         </Route>
       </Routes>

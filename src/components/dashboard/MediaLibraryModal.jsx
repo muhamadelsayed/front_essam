@@ -1,29 +1,59 @@
 // src/components/dashboard/MediaLibraryModal.jsx
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchMedia, resetMediaState } from '../../store/mediaSlice'; // **تحديث: استيراد resetMediaState**
+import { fetchMedia, resetMediaState, deleteMediaFile } from '../../store/mediaSlice'; // <-- إضافة deleteMediaFile
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Box, Button, Grid,
-  Card, CardMedia, CardActionArea, CircularProgress, Typography, IconButton
+  Card, CardMedia, CardActionArea, CircularProgress, Typography, IconButton, Tooltip
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloseIcon from '@mui/icons-material/Close';
+import DeleteIcon from '@mui/icons-material/Delete'; // <-- استيراد أيقونة الحذف
 
-const MediaFile = ({ file, onSelect, isSelected }) => {
+// --- **تحديث مكون MediaFile لإضافة زر الحذف** ---
+const MediaFile = ({ file, onSelect, isSelected, onDelete }) => {
     const isVideo = file.fileType === 'video';
+
+    const handleDeleteClick = (e) => {
+        e.stopPropagation(); // منع تحديد الملف عند النقر على الحذف
+        if (window.confirm(`هل أنت متأكد من حذف الملف "${file.fileName}"؟ لا يمكن التراجع عن هذا الإجراء.`)) {
+            onDelete(file.fileName);
+        }
+    };
+
     return (
-        <CardActionArea onClick={() => onSelect(file.fileUrl)}>
-            <Card sx={{ position: 'relative', border: isSelected ? '3px solid' : '3px solid transparent', borderColor: 'primary.main' }}>
+        <Card sx={{ position: 'relative' }}>
+            <Tooltip title="حذف الملف" placement="top">
+                <IconButton 
+                    size="small" 
+                    onClick={handleDeleteClick}
+                    sx={{
+                        position: 'absolute', top: 4, left: 4, zIndex: 2,
+                        color: 'white', backgroundColor: 'rgba(0,0,0,0.5)',
+                        '&:hover': { backgroundColor: 'rgba(255, 0, 0, 0.7)' }
+                    }}
+                >
+                    <DeleteIcon fontSize="small" />
+                </IconButton>
+            </Tooltip>
+
+            <CardActionArea onClick={() => onSelect(file.fileUrl)} sx={{ position: 'relative' }}>
                 {isVideo ? (
                     <CardMedia component="video" src={`${import.meta.env.VITE_BACKEND_URL}${file.fileUrl}`} height="140" />
                 ) : (
                     <CardMedia component="img" image={`${import.meta.env.VITE_BACKEND_URL}${file.fileUrl}`} height="140" sx={{ objectFit: 'cover' }} />
                 )}
                 {isSelected && (
-                    <CheckCircleIcon color="primary" sx={{ position: 'absolute', top: 5, right: 5, backgroundColor: 'white', borderRadius: '50%' }}/>
+                    <Box sx={{
+                        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: 'rgba(38, 70, 83, 0.5)', // لون التحديد
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                        <CheckCircleIcon color="primary" sx={{ fontSize: 40, color: 'white' }}/>
+                    </Box>
                 )}
-            </Card>
-        </CardActionArea>
+            </CardActionArea>
+        </Card>
     );
 };
 
@@ -34,7 +64,6 @@ const MediaLibraryModal = ({ open, onClose, onSelect, multiSelect = false }) => 
 
   useEffect(() => {
     if (open) {
-      // **تحديث: إعادة تعيين الحالة ثم جلب الصفحة الأولى**
       dispatch(resetMediaState()); 
       dispatch(fetchMedia({ page: 1 }));
     }
@@ -48,11 +77,15 @@ const MediaLibraryModal = ({ open, onClose, onSelect, multiSelect = false }) => 
     }
   };
   
-  // **دالة جديدة لتحميل المزيد من الوسائط**
   const handleLoadMore = () => {
       if (page < pages && status !== 'loading') {
           dispatch(fetchMedia({ page: page + 1 }));
       }
+  };
+
+  // --- **إضافة: دالة لتنفيذ عملية الحذف** ---
+  const handleDeleteFile = (filename) => {
+    dispatch(deleteMediaFile(filename));
   };
 
   const handleConfirm = () => {
@@ -71,15 +104,18 @@ const MediaLibraryModal = ({ open, onClose, onSelect, multiSelect = false }) => 
         <Grid container spacing={2}>
           {files.map((file) => (
             <Grid item key={file._id} xs={6} sm={4} md={3}>
-              <MediaFile file={file} onSelect={handleSelect} isSelected={selected.includes(file.fileUrl)} />
+              <MediaFile 
+                file={file} 
+                onSelect={handleSelect} 
+                isSelected={selected.includes(file.fileUrl)}
+                onDelete={handleDeleteFile} // <-- تمرير دالة الحذف
+              />
             </Grid>
           ))}
         </Grid>
 
-        {/* **إظهار مؤشر التحميل عند طلب صفحات إضافية** */}
         {status === 'loading' && <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}><CircularProgress /></Box>}
         
-        {/* **إظهار زر "عرض المزيد"** */}
         {page < pages && status !== 'loading' && (
             <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
                 <Button onClick={handleLoadMore} variant="outlined">عرض المزيد</Button>

@@ -6,23 +6,37 @@ const initialState = {
   files: [],
   page: 1,
   pages: 1,
-  status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
+  status: 'idle',
   error: null,
 };
 
-// **تحديث: Thunk الآن يرسل رقم الصفحة ويستقبل بيانات الترقيم**
 export const fetchMedia = createAsyncThunk('media/fetchMedia', async ({ page = 1 }, { getState }) => {
   const { auth: { userInfo } } = getState();
   const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
   const { data } = await axios.get(`/api/media/files?page=${page}`, config);
-  return data; // إرجاع الكائن الكامل { mediaFiles, page, pages }
+  return data;
 });
+
+// --- **إضافة جديدة: Thunk لحذف ملف وسائط** ---
+export const deleteMediaFile = createAsyncThunk(
+  'media/deleteFile',
+  async (filename, { getState }) => {
+    const { auth: { userInfo } } = getState();
+    const config = { headers: { Authorization: `Bearer ${userInfo.token}` } };
+    
+    // استخدام encodeURIComponent لضمان أن أسماء الملفات التي تحتوي على رموز خاصة تعمل بشكل صحيح
+    await axios.delete(`/api/media/files/${encodeURIComponent(filename)}`, config);
+    
+    // إرجاع اسم الملف المحذوف لتحديث الحالة
+    return filename;
+  }
+);
+// --- **نهاية الإضافة** ---
 
 const mediaSlice = createSlice({
   name: 'media',
   initialState,
   reducers: {
-    // **إضافة: Reducer لإعادة تعيين الحالة عند فتح النافذة**
     resetMediaState: (state) => {
         state.files = [];
         state.page = 1;
@@ -33,12 +47,12 @@ const mediaSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      // حالات fetchMedia
       .addCase(fetchMedia.pending, (state) => {
         state.status = 'loading';
       })
       .addCase(fetchMedia.fulfilled, (state, action) => {
         state.status = 'succeeded';
-        // **تحديث: دمج النتائج الجديدة بدلاً من استبدالها**
         if (action.payload.page === 1) {
             state.files = action.payload.mediaFiles;
         } else {
@@ -50,7 +64,18 @@ const mediaSlice = createSlice({
       .addCase(fetchMedia.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.error.message;
+      })
+      // --- **إضافة جديدة: حالات deleteMediaFile** ---
+      .addCase(deleteMediaFile.fulfilled, (state, action) => {
+        // حذف الملف من الحالة المحلية بدون الحاجة لإعادة تحميل
+        state.files = state.files.filter(file => file.fileName !== action.payload);
+      })
+      .addCase(deleteMediaFile.rejected, (state, action) => {
+        // يمكنك هنا عرض رسالة خطأ للمستخدم إذا أردت
+        console.error("Failed to delete media file:", action.error.message);
+        state.error = "فشل في حذف الملف.";
       });
+      // --- **نهاية الإضافة** ---
   },
 });
 

@@ -7,14 +7,15 @@ import CategoryIcon from '@mui/icons-material/Category';
 import GroupIcon from '@mui/icons-material/Group';
 import HomeIcon from '@mui/icons-material/Home';
 import SettingsIcon from '@mui/icons-material/Settings'; // استيراد أيقونة
-
+import StyleIcon from '@mui/icons-material/Style';
 const DashboardSidebar = () => {
   const menuItems = [
     { text: 'نظرة عامة', icon: <DashboardIcon />, link: '/dashboard' },
     { text: 'الخدمات/المنتجات', icon: <ShoppingBagIcon />, link: '/dashboard/products' },
     { text: 'الأقسام', icon: <CategoryIcon />, link: '/dashboard/categories' },
     { text: 'المستخدمون', icon: <GroupIcon />, link: '/dashboard/users' },
-    { text: 'الإعدادات', icon: <SettingsIcon />, link: '/dashboard/settings' }, // إضافة رابط الإعدادات
+    { text: 'الإعدادات', icon: <SettingsIcon />, link: '/dashboard/settings' },
+     { text: 'تخصيص CSS', icon: <StyleIcon />, link: '/dashboard/css' },
   ];
 
   return (
