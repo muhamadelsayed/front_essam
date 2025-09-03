@@ -21,40 +21,44 @@ const MediaFile = ({ file, onSelect, isSelected, onDelete }) => {
         }
     };
 
-    return (
-        <Card sx={{ position: 'relative' }}>
-            <Tooltip title="حذف الملف" placement="top">
-                <IconButton 
-                    size="small" 
-                    onClick={handleDeleteClick}
-                    sx={{
-                        position: 'absolute', top: 4, left: 4, zIndex: 2,
-                        color: 'white', backgroundColor: 'rgba(0,0,0,0.5)',
-                        '&:hover': { backgroundColor: 'rgba(255, 0, 0, 0.7)' }
-                    }}
-                >
-                    <DeleteIcon fontSize="small" />
-                </IconButton>
-            </Tooltip>
+  // Always use /api/uploads/ and avoid double
+  let url = file.fileUrl || '';
+  url = url.replace(/^\/api\/uploads\//, '').replace(/^\/uploads\//, '');
+  const fullUrl = `${import.meta.env.VITE_BACKEND_URL}/api/uploads/${url}`;
+  return (
+    <Card sx={{ position: 'relative' }}>
+      <Tooltip title="حذف الملف" placement="top">
+        <IconButton 
+          size="small" 
+          onClick={handleDeleteClick}
+          sx={{
+            position: 'absolute', top: 4, left: 4, zIndex: 2,
+            color: 'white', backgroundColor: 'rgba(0,0,0,0.5)',
+            '&:hover': { backgroundColor: 'rgba(255, 0, 0, 0.7)' }
+          }}
+        >
+          <DeleteIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
 
-            <CardActionArea onClick={() => onSelect(file.fileUrl)} sx={{ position: 'relative' }}>
-                {isVideo ? (
-                    <CardMedia component="video" src={`${import.meta.env.VITE_BACKEND_URL}${file.fileUrl}`} height="140" />
-                ) : (
-                    <CardMedia component="img" image={`${import.meta.env.VITE_BACKEND_URL}${file.fileUrl}`} height="140" sx={{ objectFit: 'cover' }} />
-                )}
-                {isSelected && (
-                    <Box sx={{
-                        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                        backgroundColor: 'rgba(38, 70, 83, 0.5)', // لون التحديد
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}>
-                        <CheckCircleIcon color="primary" sx={{ fontSize: 40, color: 'white' }}/>
-                    </Box>
-                )}
-            </CardActionArea>
-        </Card>
-    );
+      <CardActionArea onClick={() => onSelect(file.fileUrl)} sx={{ position: 'relative' }}>
+        {isVideo ? (
+          <CardMedia component="video" src={fullUrl} height="140" sx={{ objectFit: 'cover' }} playsInline muted />
+        ) : (
+          <CardMedia component="img" image={fullUrl} height="140" sx={{ objectFit: 'cover' }} />
+        )}
+        {isSelected && (
+          <Box sx={{
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(38, 70, 83, 0.5)', // لون التحديد
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <CheckCircleIcon color="primary" sx={{ fontSize: 40, color: 'white' }}/>
+          </Box>
+        )}
+      </CardActionArea>
+    </Card>
+  );
 };
 
 const MediaLibraryModal = ({ open, onClose, onSelect, multiSelect = false }) => {

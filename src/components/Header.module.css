@@ -1,0 +1,73 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  position: relative;
+  z-index: 10;
+}
+.logo a {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #333;
+  text-decoration: none;
+}
+.menuButton {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  z-index: 20;
+}
+.menuIcon {
+  display: block;
+}
+.nav {
+  display: flex;
+  gap: 1.5rem;
+  transition: right 0.3s;
+}
+.nav a {
+  color: #333;
+  text-decoration: none;
+  font-size: 1rem;
+  transition: color 0.2s;
+}
+.nav a:hover {
+  color: #007bff;
+}
+
+@media (max-width: 768px) {
+  .menuButton {
+    display: block;
+  }
+  .nav {
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    right: -100vw;
+    width: 70vw;
+    height: 100vh;
+    background: #fff;
+    box-shadow: -2px 0 8px rgba(0,0,0,0.08);
+    padding: 5rem 2rem 2rem 2rem;
+    gap: 2rem;
+    z-index: 15;
+    transition: right 0.3s;
+  }
+  .navOpen {
+    right: 0;
+  }
+  .overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.2);
+    z-index: 12;
+  }
+}

@@ -58,8 +58,8 @@ const renderMedia = (item) => {
                         src={url}
                         controls
                         style={mediaStyles}
-                        crossOrigin="anonymous"
                         preload="metadata"
+                        playsInline
                     >
                         عذراً، المتصفح لا يدعم تشغيل هذا الفيديو.
                     </video>
@@ -127,10 +127,17 @@ const ProductDetailsPage = () => {
     const galleryItems = useMemo(() => {
         if (!product) return [];
         const allMedia = Array.from(new Set([product.image, ...(product.images || [])].filter(Boolean)));
-        const mainImageThumbnail = `${import.meta.env.VITE_BACKEND_URL}${product.image}`;
+        // Ensure all product images have /api/uploads/ in the URL
+        const getFullUrl = (mediaUrl) => {
+            let url = mediaUrl || '';
+            // Remove any leading /api/uploads/ or /uploads/ to avoid double
+            url = url.replace(/^\/api\/uploads\//, '').replace(/^\/uploads\//, '');
+            return `${import.meta.env.VITE_BACKEND_URL}/api/uploads/${url}`;
+        };
+        const mainImageThumbnail = getFullUrl(product.image);
 
         return allMedia.map(mediaUrl => {
-            const fullUrl = `${import.meta.env.VITE_BACKEND_URL}${mediaUrl}`;
+            const fullUrl = getFullUrl(mediaUrl);
             const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(fullUrl);
             const item = { original: fullUrl, thumbnail: isImage ? fullUrl : mainImageThumbnail, mainImageThumbnail, originalAlt: product.name, thumbnailAlt: product.name };
             item.renderThumbInner = () => renderCustomThumb(item);

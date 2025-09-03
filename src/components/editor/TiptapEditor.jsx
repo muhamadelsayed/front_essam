@@ -38,11 +38,18 @@ const CustomVideo = Node.create({
       {
         tag: 'video',
         getAttrs: (element) => {
-          // التحقق من أن العنصر هو <video> وأن له عنصر <source> بداخله
-          if (element instanceof HTMLVideoElement && element.querySelector('source')) {
-            return { src: element.querySelector('source').getAttribute('src') };
+          if (element instanceof HTMLVideoElement) {
+            // جرب الحصول على المصدر من خاصية src مباشرة
+            const directSrc = element.getAttribute('src');
+            if (directSrc) {
+              return { src: directSrc };
+            }
+            // جرب الحصول على المصدر من عنصر source بداخله
+            const sourceElement = element.querySelector('source');
+            if (sourceElement) {
+              return { src: sourceElement.getAttribute('src') };
+            }
           }
-          // إذا لم يتطابق، أرجع false لتجاهل هذا الوسم
           return false;
         },
       },
@@ -50,8 +57,14 @@ const CustomVideo = Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    // بناء HTML الصحيح مع عنصر source
-    return ['video', { controls: 'true', style: 'width: 100%; border-radius: 8px;' }, ['source', HTMLAttributes]];
+    // استخدام بنية أبسط للفيديو لتحسين التوافق مع الهاتف المحمول
+    return ['video', { 
+      ...HTMLAttributes,
+      controls: 'true', 
+      playsInline: 'true',
+      preload: 'metadata',
+      style: 'width: 100%; border-radius: 8px;' 
+    }];
   },
 
   addCommands() {
@@ -187,7 +200,38 @@ const TiptapEditor = ({ content, onContentChange }) => {
   }, [content, editor]);
 
   return (
-    <Box sx={{ border: '1px solid #ccc', borderRadius: 1 }}>
+    <Box sx={{ border: '1px solid #ccc', borderRadius: 1, width: '100%', overflowX: 'auto' }}>
+      <style>{`
+        .ProseMirror img {
+          max-width: 100%;
+          height: auto;
+          max-height: 70vh;
+          display: block;
+          margin: 1rem auto;
+          border-radius: 8px;
+        }
+        .ProseMirror video {
+          max-width: 100%;
+          height: auto;
+          max-height: 70vh;
+          display: block;
+          margin: 1rem auto;
+          border-radius: 8px;
+        }
+        /* تحسينات الفيديو للهاتف المحمول */
+        @media (max-width: 768px) {
+          .ProseMirror video {
+            max-height: 50vh;
+            width: 100%;
+          }
+        }
+        .ProseMirror audio {
+          width: 100%;
+          max-width: 100%;
+          margin: 1rem auto;
+          display: block;
+        }
+      `}</style>
       <MenuBar editor={editor} />
       <EditorContent editor={editor} />
     </Box>

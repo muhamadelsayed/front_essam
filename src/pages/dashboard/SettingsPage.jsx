@@ -50,11 +50,12 @@ const SettingsPage = () => {
   useEffect(() => {
     if (settings) {
       setSiteName(settings.siteName || '');
-      if (settings.logoUrl) {
-        setLogoPreview(`${import.meta.env.VITE_API_BASE_URL}${settings.logoUrl}`);
-      } else {
-        setLogoPreview('');
-      }
+          if (settings.logoUrl) {
+            let logoUrl = settings.logoUrl;
+            // Remove any leading /api/uploads/ or /uploads/ to avoid double
+            logoUrl = logoUrl.replace(/^\/api\/uploads\//, '').replace(/^\/uploads\//, '');
+            setLogoPreview(`${import.meta.env.VITE_API_BASE_URL}/api/uploads/${logoUrl}`);
+          }
       setAboutUsContent(settings.aboutUsContent || '');
       setContactEmail(settings.contactEmail || '');
       setContactPhone(settings.contactPhone || '');
@@ -63,7 +64,13 @@ const SettingsPage = () => {
       
       const methodsWithFullUrls = (settings.paymentMethods || []).map(method => ({
           ...method,
-          imageUrl: method.imageUrl ? `${import.meta.env.VITE_API_BASE_URL}${method.imageUrl}` : ''
+              imageUrl: method.imageUrl
+                ? (() => {
+                    let url = method.imageUrl;
+                    url = url.replace(/^\/api\/uploads\//, '').replace(/^\/uploads\//, '');
+                    return `${import.meta.env.VITE_API_BASE_URL}/api/uploads/${url}`;
+                  })()
+                : ''
       }));
 
       setPaymentMethods(methodsWithFullUrls.length > 0 ? methodsWithFullUrls : [{ title: '', description: '', imageUrl: '' }]);

@@ -23,7 +23,10 @@ const CARD_HEIGHT = 420;
 const IMAGE_HEIGHT = 200;
 
 const ProductCard = ({ product }) => {
-  const imageUrl = `${import.meta.env.VITE_BACKEND_URL}${product.image}`;
+  let url = product.image || '';
+  // Remove any leading /api or /uploads to avoid double
+  url = url.replace(/^\/api\/uploads\//, '').replace(/^\/uploads\//, '');
+  const imageUrl = `${import.meta.env.VITE_BACKEND_URL}/api/uploads/${url}`;
   return (
     <motion.div
       variants={cardVariants}

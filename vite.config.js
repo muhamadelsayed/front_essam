@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-
+  console.log('env:', env.VITE_BACKEND_URL_PROD);
   return {
     plugins: [react()],
     server: {
@@ -21,14 +21,14 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       'import.meta.env.VITE_API_BASE_URL': JSON.stringify(
-        mode === 'production' 
-          ? env.VITE_BACKEND_URL_PROD 
-          : '' // <-- القيمة الصحيحة: نص فارغ
+        mode === 'production'
+          ? env.VITE_BACKEND_URL_PROD
+          : env.VITE_BACKEND_URL_PROD // Use the same backend URL in dev and prod
       ),
       'import.meta.env.VITE_BACKEND_URL': JSON.stringify(
         mode === 'production'
           ? env.VITE_BACKEND_URL_PROD
-          : '' // <-- القيمة الصحيحة: نص فارغ
+          : env.VITE_BACKEND_URL_PROD // Use the same backend URL in dev and prod
       )
     },
   };

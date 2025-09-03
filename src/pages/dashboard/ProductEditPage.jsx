@@ -25,7 +25,7 @@ const MediaPreview = ({ src, onRemove, sx }) => {
     return (
         <Box sx={{ position: 'relative', ...sx }}>
             {isVideo ? (
-                <video src={src} style={baseStyle} controls />
+                <video src={src} style={baseStyle} controls playsInline />
             ) : isAudio ? (
                 <Box sx={{ ...baseStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.200' }}>
                     <audio src={src} controls style={{ width: '100%' }} />
@@ -88,9 +88,15 @@ const ProductEditPage = () => {
       setCountInStock(product.countInStock || '');
       setIsVirtual(product.isVirtual || false);
       setExecutionTime(product.executionTime || '');
-      if (product.image) setImage({ file: null, url: `${import.meta.env.VITE_BACKEND_URL}${product.image}` });
+      const getFullUrl = (mediaUrl) => {
+        let url = mediaUrl || '';
+        // Remove any leading /api/uploads/ or /uploads/ to avoid double
+        url = url.replace(/^\/api\/uploads\//, '').replace(/^\/uploads\//, '');
+        return `${import.meta.env.VITE_BACKEND_URL}/api/uploads/${url}`;
+      };
+      if (product.image) setImage({ file: null, url: getFullUrl(product.image) });
       if (product.images?.length) {
-        setGallery(product.images.map(imgUrl => ({ file: null, url: `${import.meta.env.VITE_BACKEND_URL}${imgUrl}` })));
+        setGallery(product.images.map(imgUrl => ({ file: null, url: getFullUrl(imgUrl) })));
       }
     }
   }, [product, isEditMode]);
@@ -111,12 +117,18 @@ const ProductEditPage = () => {
   };
 
   const handleMediaSelect = (selectedUrls) => {
-      const formattedUrls = selectedUrls.map(url => `${import.meta.env.VITE_BACKEND_URL}${url}`);
+      const getFullUrl = (mediaUrl) => {
+        let url = mediaUrl || '';
+        // Remove any leading /api/uploads/ or /uploads/ to avoid double
+        url = url.replace(/^\/api\/uploads\//, '').replace(/^\/uploads\//, '');
+        return `${import.meta.env.VITE_BACKEND_URL}/api/uploads/${url}`;
+      };
+      const formattedUrls = selectedUrls.map(getFullUrl);
       if (mediaTarget === 'image') {
-          setImage({ file: null, url: formattedUrls[0] });
+        setImage({ file: null, url: formattedUrls[0] });
       } else {
-          const newItems = formattedUrls.map(url => ({ file: null, url }));
-          setGallery(prev => [...prev, ...newItems]);
+        const newItems = formattedUrls.map(url => ({ file: null, url }));
+        setGallery(prev => [...prev, ...newItems]);
       }
   };
 

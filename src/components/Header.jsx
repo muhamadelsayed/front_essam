@@ -1,9 +1,16 @@
 // src/components/Header.jsx
-import { AppBar, Toolbar, Typography, Button, Container, Menu, MenuItem, Box, IconButton, Avatar } from '@mui/material';
+
+import { AppBar, Toolbar, Typography, Button, Container, Menu, MenuItem, Box, IconButton, Avatar, Tooltip } from '@mui/material';
+import HomeIcon from '@mui/icons-material/Home';
+import InfoIcon from '@mui/icons-material/Info';
+import ContactMailIcon from '@mui/icons-material/ContactMail';
+import PaymentIcon from '@mui/icons-material/Payment';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../store/authSlice';
 import { useState } from 'react';
+
+
 
 const Header = () => {
   const dispatch = useDispatch();
@@ -12,6 +19,7 @@ const Header = () => {
   const { settings } = useSelector((state) => state.settings);
 
   const [anchorEl, setAnchorEl] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const handleMenu = (event) => {
     setAnchorEl(event.currentTarget);
@@ -27,36 +35,66 @@ const Header = () => {
     navigate('/login');
   };
 
+  const handleMenuToggle = () => {
+    setMenuOpen((prev) => !prev);
+  };
+
   const handleDashboard = () => {
     handleClose();
     navigate('/dashboard');
   };
+
   // **الإصلاح هنا:** بناء الرابط الكامل للشعار
-  const logoFullUrl = settings.logoUrl && !settings.logoUrl.startsWith('http') 
-                    ? `${import.meta.env.VITE_BACKEND_URL}${settings.logoUrl}` 
-                    : settings.logoUrl;
+  let logoFullUrl = settings.logoUrl;
+  if (logoFullUrl && !logoFullUrl.startsWith('http')) {
+    logoFullUrl = logoFullUrl.replace(/^\/api\/uploads\//, '').replace(/^\/uploads\//, '');
+    logoFullUrl = `${import.meta.env.VITE_BACKEND_URL}/api/uploads/${logoFullUrl}`;
+  }
 
   return (
-    <AppBar position="sticky" elevation={1} sx={{ bgcolor: 'background.paper', color: 'text.primary' }}>
-      <Container maxWidth="lg">
-        <Toolbar disableGutters>
-          {/* عرض الشعار واسم الموقع */}
-          <Box component={RouterLink} to="/" sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
+    <AppBar position="sticky" elevation={1} sx={{ bgcolor: 'background.paper', color: 'text.primary', width: '100vw', maxWidth: '100vw', overflowX: 'hidden' }}>
+      <Container maxWidth="xl" disableGutters sx={{ px: { xs: 1, sm: 2 }, maxWidth: '100vw!important' }}>
+        <Toolbar disableGutters sx={{ flexWrap: 'wrap', minHeight: { xs: 56, sm: 64 } }}>
+          {/* Logo and Site Name */}
+          <Box component={RouterLink} to="/" sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit', minWidth: 0 }}>
             {settings.logoUrl && (
-              <Box component="img" src={logoFullUrl} alt="Logo" sx={{ height: 40, mr: 2 }} />
+              <Box component="img" src={logoFullUrl} alt="Logo" sx={{ height: 40, mr: 2, maxWidth: 120, width: 'auto' }} />
             )}
-            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+            <Typography variant="h6" sx={{ fontWeight: 'bold', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: { xs: 120, sm: 200 } }}>
               {settings.siteName}
             </Typography>
           </Box>
-
-
-          <Box sx={{ flexGrow: 1 }} /> {/* فاصل مرن */}
-            <Button color="inherit" component={RouterLink} to="/payment-methods">طرق الدفع</Button> {/* <-- إضافة الرابط */}
-            <Button color="inherit" component={RouterLink} to="/contact">تواصل معنا</Button> {/* <-- إضافة الرابط */}
+          <Box sx={{ flexGrow: 1 }} />
+          {/* Navigation Buttons - full text on sm+, icons on xs */}
+          <Box sx={{ display: { xs: 'none', sm: 'flex' }, gap: 1 }}>
+            <Button color="inherit" component={RouterLink} to="/payment-methods">طرق الدفع</Button>
+            <Button color="inherit" component={RouterLink} to="/contact">تواصل معنا</Button>
             <Button color="inherit" component={RouterLink} to="/about">من نحن</Button>
             <Button color="inherit" component={RouterLink} to="/">الرئيسية</Button>
-          {/* التحقق إذا كان المستخدم مسجلاً دخوله */}
+          </Box>
+          <Box sx={{ display: { xs: 'flex', sm: 'none' }, gap: 1 }}>
+            <Tooltip title="الرئيسية" arrow>
+              <IconButton color="inherit" component={RouterLink} to="/">
+                <HomeIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="من نحن" arrow>
+              <IconButton color="inherit" component={RouterLink} to="/about">
+                <InfoIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="تواصل معنا" arrow>
+              <IconButton color="inherit" component={RouterLink} to="/contact">
+                <ContactMailIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="طرق الدفع" arrow>
+              <IconButton color="inherit" component={RouterLink} to="/payment-methods">
+                <PaymentIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
+          {/* User menu */}
           {userInfo ? (
             <div>
               <IconButton onClick={handleMenu} color="inherit">
@@ -79,7 +117,7 @@ const Header = () => {
               </Menu>
             </div>
           ) : (
-            <Box>
+            <Box sx={{ ml: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
               <Button variant="outlined" component={RouterLink} to="/login" sx={{ ml: 1 }}>
                 تسجيل الدخول
               </Button>

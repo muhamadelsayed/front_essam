@@ -32,12 +32,18 @@ const ProductListPage = () => {
     {
       field: 'image',
       headerName: 'الصورة',
-      width: 100,
-      renderCell: (params) => <Avatar src={`${import.meta.env.VITE_BACKEND_URL}${params.value}`} variant="rounded" sx={{ width: 56, height: 56 }} />,
+      width: 72,
+      renderCell: (params) => {
+        let url = params.value || '';
+        // Remove any leading /api/uploads/ or /uploads/ to avoid double
+        url = url.replace(/^\/api\/uploads\//, '').replace(/^\/uploads\//, '');
+        // smaller avatar for compact layout
+        return <Avatar src={`${import.meta.env.VITE_BACKEND_URL}/api/uploads/${url}`} variant="rounded" sx={{ width: 36, height: 36 }} />;
+      },
       sortable: false,
       filterable: false,
     },
-    { field: 'name', headerName: 'اسم المنتج', flex: 1, minWidth: 250 },
+  { field: 'name', headerName: 'اسم المنتج', flex: 1, minWidth: 160 },
     // src/pages/dashboard/ProductListPage.jsx -> columns
 
 // ... (الأعمدة الأخرى)
@@ -45,7 +51,7 @@ const ProductListPage = () => {
   // يمكننا تسمية الحقل بأي اسم فريد، هذا لا يؤثر على العرض
   field: 'categoryName', 
   headerName: 'القسم',
-  width: 150,
+  width: 120,
   // renderCell هي الطريقة الأضمن لعرض مكونات أو قيم معقدة
   renderCell: (params) => {
     // params.row هو كائن المنتج الكامل
@@ -54,33 +60,25 @@ const ProductListPage = () => {
   }
 },
 // ... (الأعمدة الأخرى)
-    { field: 'price', headerName: 'السعر', width: 120, renderCell: (params) => `$${params.value}` },
-    { field: 'countInStock', headerName: 'المخزون', width: 120 },
+  { field: 'price', headerName: 'السعر', width: 100, renderCell: (params) => `$${params.value}` },
+  { field: 'countInStock', headerName: 'المخزون', width: 90 },
     {
       field: 'actions',
       headerName: 'إجراءات',
-      minWidth: 90,
-      width: 120,
+  minWidth: 70,
+  width: 100,
       sortable: false,
       filterable: false,
       disableExport: true,
       renderCell: (params) => (
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 0.5,
-            width: '100%',
-          }}
-        >
+        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', alignItems: 'center' }}>
           <IconButton
             component={RouterLink}
             to={`/dashboard/product/${params.id}/edit`}
             size="small"
             sx={{ p: 0.5 }}
             aria-label="edit"
+            title="تعديل المنتج"
           >
             <EditIcon fontSize="small" />
           </IconButton>
@@ -89,6 +87,7 @@ const ProductListPage = () => {
             size="small"
             sx={{ p: 0.5 }}
             aria-label="delete"
+            title="حذف المنتج"
           >
             <DeleteIcon fontSize="small" color="error" />
           </IconButton>
@@ -135,23 +134,47 @@ const ProductListPage = () => {
       {status === 'loading' && rows.length === 0 && <CircularProgress />}
       {status === 'failed' && <Alert severity="error">{error}</Alert>}
       
-      <Paper sx={{ height: 650, width: '100%', overflowX: 'auto' }}>
-        <Box sx={{ minWidth: 600 }}>
-          <DataGrid
-            rows={rows}
-            columns={columns}
-            loading={status === 'loading'}
-            initialState={{
-              pagination: {
-                paginationModel: { page: 0, pageSize: 10 },
-              },
-            }}
-            pageSizeOptions={[10, 20, 50]}
-            checkboxSelection
-            disableRowSelectionOnClick
-            components={{ Toolbar: GridToolbar }}
-            autoHeight={false}
-          />
+      <Paper sx={{ width: '100%', overflow: 'hidden', borderRadius: 3, boxShadow: 3 }}>
+        {/* outer wrapper enables horizontal scrolling on small screens */}
+        <Box sx={{ width: '100%', overflowX: 'auto' }}>
+          {/* inner box sets a minWidth so columns can overflow horizontally on narrow viewports */}
+          <Box sx={{ minWidth: { xs: 680, sm: 720, md: '100%' } }}>
+            <DataGrid
+              rows={rows}
+              columns={columns}
+              loading={status === 'loading'}
+              initialState={{
+                pagination: {
+                  paginationModel: { page: 0, pageSize: 10 },
+                },
+              }}
+              pageSizeOptions={[10, 20, 50]}
+              // removed checkboxSelection to save horizontal space on small screens
+              disableRowSelectionOnClick
+              components={{ Toolbar: GridToolbar }}
+              density="compact"
+              autoHeight
+              rowHeight={48}
+              headerHeight={48}
+              sx={{
+                '& .MuiDataGrid-row:nth-of-type(even)': {
+                  backgroundColor: 'rgba(0,0,0,0.03)',
+                },
+                '& .MuiDataGrid-row:hover': {
+                  backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                },
+                fontSize: { xs: '0.78rem', md: '0.95rem' },
+                minWidth: 720,
+                '& .MuiDataGrid-virtualScroller': {
+                  // allow the internal grid scroller to scroll horizontally if needed
+                  overflowX: 'auto',
+                },
+                '& .MuiDataGrid-cell': {
+                  py: 0.5,
+                },
+              }}
+            />
+          </Box>
         </Box>
       </Paper>
     </Box>

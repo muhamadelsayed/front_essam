@@ -129,8 +129,9 @@ const HomePage = () => {
 
   return (
     <>
-  <Meta title="الصفحة الرئيسية" description="مرحبًا بكم في متجرنا" keywords="متجر, إلكترونيات, ملابس" />
-  <motion.div initial="initial" animate="in" exit="out" variants={pageVariants} transition={pageTransition} dir="rtl" lang="ar">
+      <Meta title="الصفحة الرئيسية" description="مرحبًا بكم في متجرنا" keywords="متجر, إلكترونيات, ملابس" />
+      <Box sx={{ minHeight: 'calc(100vh - 64px)', width: '100%', overflowX: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+        <motion.div initial="initial" animate="in" exit="out" variants={pageVariants} transition={pageTransition} dir="rtl" lang="ar" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {/* 1. منطقة العنوان والفلاتر */}
         <Paper elevation={2} sx={{ p: { xs: 2, md: 4 }, mb: 4, bgcolor: 'background.paper', borderRadius: 3, boxShadow: 3 }}>
           <Box sx={{ mb: 3, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: { md: 'center' }, justifyContent: 'space-between', gap: 2 }}>
@@ -221,7 +222,8 @@ const HomePage = () => {
             Number(filters.price_lte) || 1000
         ]}
       />
-    </motion.div>
+        </motion.div>
+      </Box>
     </>
   );
 };

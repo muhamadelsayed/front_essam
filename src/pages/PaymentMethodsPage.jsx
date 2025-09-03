@@ -36,9 +36,12 @@ const PaymentMethodsPage = () => {
             paymentMethods.map((method, index) => {
               // --- **الإصلاح الرئيسي هنا: بناء الرابط الكامل للصورة** ---
               // نتحقق من وجود رابط للصورة وأنه ليس رابط معاينة محلي (blob:)
-              const imageUrl = method.imageUrl && !method.imageUrl.startsWith('blob:')
-                  ? `${import.meta.env.VITE_API_BASE_URL}${method.imageUrl}` 
-                  : method.imageUrl; // إذا كان رابط معاينة، اعرضه كما هو
+              let imageUrl = method.imageUrl;
+              if (imageUrl && !imageUrl.startsWith('blob:')) {
+                // Remove any leading /api/uploads/ or /uploads/ to avoid double
+                imageUrl = imageUrl.replace(/^\/api\/uploads\//, '').replace(/^\/uploads\//, '');
+                imageUrl = `${import.meta.env.VITE_API_BASE_URL}/api/uploads/${imageUrl}`;
+              }
 
               return (
                   <Grid item key={index} xs={12} sm={6} md={4}>
